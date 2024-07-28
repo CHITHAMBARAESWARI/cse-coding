@@ -1,0 +1,145 @@
+//server code
+import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
+import javax.websocket.OnClose;
+import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
+import javax.websocket.Session;
+import javax.websocket.server.ServerEndpoint;
+import org.json.JSONObject;
+
+@ServerEndpoint("/chat")
+public class ChatServer {
+    private static ConcurrentHashMap<String, ChatRoom> chatRooms = new ConcurrentHashMap<>();
+
+    @OnOpen
+    public void onOpen(Session session) {
+        System.out.println("New connection: " + session.getId());
+    }
+
+    @OnMessage
+    public void onMessage(String message, Session session) throws IOException {
+        JSONObject jsonMessage = new JSONObject(message);
+        String roomId = jsonMessage.getString("roomId");
+        String username = jsonMessage.getString("username");
+        String msg = jsonMessage.getString("message");
+
+        ChatRoom chatRoom = chatRooms.computeIfAbsent(roomId, k -> ChatRoom.getInstance());
+        chatRoom.addClient(session, username);
+        chatRoom.broadcastMessage(username, msg);
+    }
+
+    @OnClose
+    public void onClose(Session session) {
+        chatRooms.values().forEach(room -> room.removeClient(session));
+    }
+}
+//chatroom code
+import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
+import javax.websocket.Session;
+import org.json.JSONObject;
+
+public class ChatRoom {
+    private static ChatRoom instance = new ChatRoom();
+    private ConcurrentHashMap<Session, String> clients = new ConcurrentHashMap<>();
+
+    private ChatRoom() {}
+
+    public static ChatRoom getInstance() {
+        return instance;
+    }
+
+    public void addClient(Session session, String username) {
+        clients.put(session, username);
+        notifyUsers();
+    }
+
+    public void removeClient(Session session) {
+        clients.remove(session);
+        notifyUsers();
+    }
+
+    public void broadcastMessage(String username, String message) {
+        JSONObject jsonMessage = new JSONObject();
+        jsonMessage.put("type", "message");
+        jsonMessage.put("username", username);
+        jsonMessage.put("message", message);
+
+        clients.keySet().forEach(session -> {
+            try {
+                session.getBasicRemote().sendText(jsonMessage.toString());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    public void notifyUsers() {
+        JSONObject jsonMessage = new JSONObject();
+        jsonMessage.put("type", "users");
+        jsonMessage.put("users", clients.values());
+
+        clients.keySet().forEach(session -> {
+            try {
+                session.getBasicRemote().sendText(jsonMessage.toString());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+}
+//client code
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Scanner;
+import javax.websocket.ContainerProvider;
+import javax.websocket.DeploymentException;
+import javax.websocket.Session;
+import javax.websocket.WebSocketContainer;
+
+public class ChatClient {
+    public static void main(String[] args) throws URISyntaxException, DeploymentException, IOException {
+        WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+        String uri = "ws://localhost:8080/chat";
+        Session session = container.connectToServer(ClientEndpoint.class, new URI(uri));
+
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter room ID: ");
+        String roomId = scanner.nextLine();
+        System.out.print("Enter your username: ");
+        String username = scanner.nextLine();
+
+        while (true) {
+            String message = scanner.nextLine();
+            session.getBasicRemote().sendText("{\"roomId\":\"" + roomId + "\",\"username\":\"" + username + "\",\"message\":\"" + message + "\"}");
+        }
+    }
+}
+//client endpoint
+import javax.websocket.OnClose;
+import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
+import javax.websocket.Session;
+import javax.websocket.server.ServerEndpoint;
+import java.io.IOException;
+
+@ServerEndpoint("/client")
+public class ClientEndpoint {
+
+    @OnOpen
+    public void onOpen(Session session) {
+        System.out.println("Connected to server: " + session.getId());
+    }
+
+    @OnMessage
+    public void onMessage(String message, Session session) {
+        System.out.println("Received: " + message);
+    }
+
+    @OnClose
+    public void onClose(Session session) {
+        System.out.println("Disconnected from server: " + session.getId());
+    }
+}
+// 
