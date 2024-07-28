@@ -1,0 +1,386 @@
+//Behavioral Design Patterns
+//Observer Pattern
+//ObserverPattern.java
+package behavioral;
+
+import java.util.ArrayList;
+import java.util.List;
+
+interface Observer {
+    void update(String message);
+}
+
+class ConcreteObserver implements Observer {
+    private String name;
+
+    public ConcreteObserver(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public void update(String message) {
+        System.out.println(name + " received: " + message);
+    }
+}
+
+class Subject {
+    private List<Observer> observers = new ArrayList<>();
+
+    public void addObserver(Observer observer) {
+        observers.add(observer);
+    }
+
+    public void removeObserver(Observer observer) {
+        observers.remove(observer);
+    }
+
+    public void notifyObservers(String message) {
+        for (Observer observer : observers) {
+            observer.update(message);
+        }
+    }
+}
+
+public class ObserverPattern {
+    public static void demonstrate() {
+        Subject subject = new Subject();
+        Observer observer1 = new ConcreteObserver("Observer 1");
+        Observer observer2 = new ConcreteObserver("Observer 2");
+
+        subject.addObserver(observer1);
+        subject.addObserver(observer2);
+
+        subject.notifyObservers("Hello, Observers!");
+    }
+}
+//Strategy Pattern
+//StrategyPattern.java
+package behavioral;
+
+interface Strategy {
+    int doOperation(int num1, int num2);
+}
+
+class AddOperation implements Strategy {
+    @Override
+    public int doOperation(int num1, int num2) {
+        return num1 + num2;
+    }
+}
+
+class SubtractOperation implements Strategy {
+    @Override
+    public int doOperation(int num1, int num2) {
+        return num1 - num2;
+    }
+}
+
+class Context {
+    private Strategy strategy;
+
+    public void setStrategy(Strategy strategy) {
+        this.strategy = strategy;
+    }
+
+    public int executeStrategy(int num1, int num2) {
+        return strategy.doOperation(num1, num2);
+    }
+}
+
+public class StrategyPattern {
+    public static void demonstrate() {
+        Context context = new Context();
+
+        context.setStrategy(new AddOperation());
+        System.out.println("10 + 5 = " + context.executeStrategy(10, 5));
+
+        context.setStrategy(new SubtractOperation());
+        System.out.println("10 - 5 = " + context.executeStrategy(10, 5));
+    }
+}
+//Creational Design Patterns
+//Singleton Pattern
+//SingletonPattern.java
+package creational;
+
+public class SingletonPattern {
+    private static SingletonPattern instance;
+
+    private SingletonPattern() {}
+
+    public static SingletonPattern getInstance() {
+        if (instance == null) {
+            instance = new SingletonPattern();
+        }
+        return instance;
+    }
+
+    public void showMessage() {
+        System.out.println("Hello from Singleton!");
+    }
+
+    public static void demonstrate() {
+        SingletonPattern singleton = SingletonPattern.getInstance();
+        singleton.showMessage();
+    }
+}
+//Factory Pattern
+//FactoryPattern.java
+package creational;
+
+interface Shape {
+    void draw();
+}
+
+class Circle implements Shape {
+    @Override
+    public void draw() {
+        System.out.println("Drawing a Circle.");
+    }
+}
+
+class Square implements Shape {
+    @Override
+    public void draw() {
+        System.out.println("Drawing a Square.");
+    }
+}
+
+class ShapeFactory {
+    public Shape getShape(String shapeType) {
+        if (shapeType == null) {
+            return null;
+        }
+        if (shapeType.equalsIgnoreCase("CIRCLE")) {
+            return new Circle();
+        } else if (shapeType.equalsIgnoreCase("SQUARE")) {
+            return new Square();
+        }
+        return null;
+    }
+}
+
+public class FactoryPattern {
+    public static void demonstrate() {
+        ShapeFactory shapeFactory = new ShapeFactory();
+
+        Shape shape1 = shapeFactory.getShape("CIRCLE");
+        shape1.draw();
+
+        Shape shape2 = shapeFactory.getShape("SQUARE");
+        shape2.draw();
+    }
+}
+//Structural Design Patterns
+//Adapter Pattern
+//AdapterPattern.java
+package structural;
+
+interface MediaPlayer {
+    void play(String audioType, String fileName);
+}
+
+interface AdvancedMediaPlayer {
+    void playVlc(String fileName);
+    void playMp4(String fileName);
+}
+
+class VlcPlayer implements AdvancedMediaPlayer {
+    @Override
+    public void playVlc(String fileName) {
+        System.out.println("Playing vlc file. Name: " + fileName);
+    }
+
+    @Override
+    public void playMp4(String fileName) {
+        // Do nothing
+    }
+}
+
+class Mp4Player implements AdvancedMediaPlayer {
+    @Override
+    public void playVlc(String fileName) {
+        // Do nothing
+    }
+
+    @Override
+    public void playMp4(String fileName) {
+        System.out.println("Playing mp4 file. Name: " + fileName);
+    }
+}
+
+class MediaAdapter implements MediaPlayer {
+    AdvancedMediaPlayer advancedMusicPlayer;
+
+    public MediaAdapter(String audioType) {
+        if (audioType.equalsIgnoreCase("vlc")) {
+            advancedMusicPlayer = new VlcPlayer();
+        } else if (audioType.equalsIgnoreCase("mp4")) {
+            advancedMusicPlayer = new Mp4Player();
+        }
+    }
+
+    @Override
+    public void play(String audioType, String fileName) {
+        if (audioType.equalsIgnoreCase("vlc")) {
+            advancedMusicPlayer.playVlc(fileName);
+        } else if (audioType.equalsIgnoreCase("mp4")) {
+            advancedMusicPlayer.playMp4(fileName);
+        }
+    }
+}
+
+class AudioPlayer implements MediaPlayer {
+    MediaAdapter mediaAdapter;
+
+    @Override
+    public void play(String audioType, String fileName) {
+        if (audioType.equalsIgnoreCase("mp3")) {
+            System.out.println("Playing mp3 file. Name: " + fileName);
+        } else if (audioType.equalsIgnoreCase("vlc") || audioType.equalsIgnoreCase("mp4")) {
+            mediaAdapter = new MediaAdapter(audioType);
+            mediaAdapter.play(audioType, fileName);
+        } else {
+            System.out.println("Invalid media. " + audioType + " format not supported");
+        }
+    }
+}
+
+public class AdapterPattern {
+    public static void demonstrate() {
+        AudioPlayer audioPlayer = new AudioPlayer();
+
+        audioPlayer.play("mp3", "beyond_the_horizon.mp3");
+        audioPlayer.play("mp4", "alone.mp4");
+        audioPlayer.play("vlc", "far_far_away.vlc");
+        audioPlayer.play("avi", "mind_me.avi");
+    }
+}
+//Decorator Pattern
+//DecoratorPattern.java
+package structural;
+
+interface Shape {
+    void draw();
+}
+
+class Rectangle implements Shape {
+    @Override
+    public void draw() {
+        System.out.println("Shape: Rectangle");
+    }
+}
+
+class Circle implements Shape {
+    @Override
+    public void draw() {
+        System.out.println("Shape: Circle");
+    }
+}
+
+abstract class ShapeDecorator implements Shape {
+    protected Shape decoratedShape;
+
+    public ShapeDecorator(Shape decoratedShape) {
+        this.decoratedShape = decoratedShape;
+    }
+
+    public void draw() {
+        decoratedShape.draw();
+    }
+}
+
+class RedShapeDecorator extends ShapeDecorator {
+    public RedShapeDecorator(Shape decoratedShape) {
+        super(decoratedShape);
+    }
+
+    @Override
+    public void draw() {
+        decoratedShape.draw();
+        setRedBorder(decoratedShape);
+    }
+
+    private void setRedBorder(Shape decoratedShape) {
+        System.out.println("Border Color: Red");
+    }
+}
+
+public class DecoratorPattern {
+    public static void demonstrate() {
+        Shape circle = new Circle();
+
+        Shape redCircle = new RedShapeDecorator(new Circle());
+        Shape redRectangle = new RedShapeDecorator(new Rectangle());
+
+        System.out.println("Circle with normal border");
+        circle.draw();
+
+        System.out.println("\nCircle with red border");
+        redCircle.draw();
+
+        System.out.println("\nRectangle with red border");
+        redRectangle.draw();
+    }
+}
+//Utility Classes
+//Logger.java
+package utils;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+public class Logger {
+    private static final String LOG_FILE = "application.log";
+
+    public static void log(String message) {
+        try (FileWriter writer = new FileWriter(LOG_FILE, true)) {
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            writer.write(timestamp + " - " + message + "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+//Validator.java
+package utils;
+
+public class Validator {
+    public static void validateNotNull(Object obj, String message) {
+        if (obj == null) {
+            throw new IllegalArgumentException(message);
+        }
+    }
+}
+//Main Class
+//Main.java
+import behavioral.ObserverPattern;
+import behavioral.StrategyPattern;
+import creational.SingletonPattern;
+import creational.FactoryPattern;
+import structural.AdapterPattern;
+import structural.DecoratorPattern;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Demonstrating Observer Pattern:");
+        ObserverPattern.demonstrate();
+
+        System.out.println("\nDemonstrating Strategy Pattern:");
+        StrategyPattern.demonstrate();
+
+        System.out.println("\nDemonstrating Singleton Pattern:");
+        SingletonPattern.demonstrate();
+
+        System.out.println("\nDemonstrating Factory Pattern:");
+        FactoryPattern.demonstrate();
+
+        System.out.println("\nDemonstrating Adapter Pattern:");
+        AdapterPattern.demonstrate();
+
+        System.out.println("\nDemonstrating Decorator Pattern:");
+        DecoratorPattern.demonstrate();
+    }
+}
